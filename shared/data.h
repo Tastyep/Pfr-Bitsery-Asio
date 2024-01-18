@@ -10,7 +10,6 @@ struct Header
 
 struct Data
 {
-  Header      header;
   int         number;
   std::string str;
 };
