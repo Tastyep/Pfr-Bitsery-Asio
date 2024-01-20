@@ -1,8 +1,8 @@
 #include "shared/data.h"
 // clang-format off
-#include <chrono>
 #include <cstdint>
 // clang-format on
+#include "shared/serialization/binary.h"
 
 #include <bitsery/adapter/buffer.h>
 #include <bitsery/bitsery.h>
@@ -10,13 +10,12 @@
 #include <bitsery/traits/string.h>
 #include <bitsery/traits/vector.h>
 #include <boost/asio.hpp>
-#include <boost/pfr/core.hpp>
-#include <boost/pfr/core_name.hpp>
-#include <concepts>
+#include <boost/pfr/io.hpp>
+#include <chrono>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
-#include <type_traits>
+#include <utility>
 #include <vector>
 
 using boost::asio::ip::tcp;
@@ -24,40 +23,6 @@ using boost::asio::ip::tcp;
 using Buffer        = std::vector<uint8_t>;
 using OutputAdapter = bitsery::OutputBufferAdapter<Buffer>;
 using InputAdapter  = bitsery::InputBufferAdapter<Buffer>;
-
-template <typename... T>
-struct Overloaded : public T...
-{
-  using T::operator()...;
-};
-template <class... Ts>
-Overloaded(Ts...) -> Overloaded<Ts...>;
-
-template <typename T>
-concept IsClass = std::is_class_v<T>;
-
-template <typename S>
-void serialize(S &s, IsClass auto &data)
-{
-  /* const auto fieldnames = boost::pfr::names_as_array<data>(); */
-  boost::pfr::for_each_field(//
-      data,
-      Overloaded{
-          [&s]<typename T>(T &field)
-            requires std::is_arithmetic_v<T>
-          {
-            s.template value<sizeof field>(field);
-          },
-          [&s](std::string &field)
-          {
-            s.text1b(field, 100);
-          },
-          [&s](IsClass auto &field)
-          {
-            serialize(s, field);
-          },
-      });
-}
 
 std::pair<Buffer, std::size_t> serialize(const auto &data)
 {
@@ -71,19 +36,22 @@ void benchmarkBitsery()
 {
   Buffer     buffer;
   const auto data = Data{
-      .number = 42,
-      .str    = "Hello World!",
+      .number    = 42,
+      .firstStr  = "Hello",
+      .secondStr = "World!",
   };
   Data output{};
 
   const auto beg = std::chrono::high_resolution_clock::now();
-  for (int i = 0; i < 1'000'000; ++i)
+  for (int i = 0; i < 1'000; ++i)
   {
     const auto writtenSize =
         bitsery::quickSerialization(OutputAdapter{buffer}, data);
     bitsery::quickDeserialization(InputAdapter{buffer.begin(), writtenSize},
                                   output);
   }
+
+  std::cout << boost::pfr::io(output) << std::endl;
   const auto end = std::chrono::high_resolution_clock::now();
   const auto duration =
       std::chrono::duration_cast<std::chrono::milliseconds>(end - beg);
