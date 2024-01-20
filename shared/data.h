@@ -11,7 +11,8 @@ struct Header
 struct Data
 {
   int         number;
-  std::string str;
+  std::string firstStr;
+  std::string secondStr;
 };
 
 #endif
