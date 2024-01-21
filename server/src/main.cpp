@@ -51,13 +51,13 @@ struct HumanReadable
   }
 };
 
-std::pair<std::vector<Data>, std::size_t> parsePackets(const Buffer &buffer,
-                                                       std::size_t   bufferSize)
+std::pair<std::vector<LargeData>, std::size_t>
+parsePackets(const Buffer &buffer, std::size_t bufferSize)
 {
   std::size_t parsedSize{0};
 
-  std::vector<Data> packets;
-  Header            header{};
+  std::vector<LargeData> packets;
+  Header                 header{};
 
   while (parsedSize < bufferSize)
   {
@@ -71,7 +71,7 @@ std::pair<std::vector<Data>, std::size_t> parsePackets(const Buffer &buffer,
     }
     parsedSize += sizeof(Header);
 
-    Data data{};
+    LargeData data{};
     if (auto [code, _] = bitsery::quickDeserialization(
             InputAdapter{std::next(buffer.begin(), parsedSize),
                          bufferSize - parsedSize},
@@ -82,8 +82,8 @@ std::pair<std::vector<Data>, std::size_t> parsePackets(const Buffer &buffer,
       parsedSize -= sizeof(Header);
       break;
     }
-
     parsedSize += header.size;
+
     /* std::cout << boost::pfr::io(header) << " | " << boost::pfr::io(data) */
     /*           << std::endl; */
     packets.push_back(std::move(data));
@@ -96,10 +96,10 @@ awaitable<void> echo(tcp::socket socket)
 {
   std::printf("New client connected");
 
-  Buffer            data(4096);
-  std::size_t       receivedBytes{0};
-  std::size_t       remainingBytes{0};
-  std::vector<Data> receivedPackets;
+  Buffer                 data(16384);
+  std::size_t            receivedBytes{0};
+  std::size_t            remainingBytes{0};
+  std::vector<LargeData> receivedPackets;
 
   auto       start         = std::chrono::high_resolution_clock::now();
   const auto speedInterval = std::chrono::milliseconds{100};

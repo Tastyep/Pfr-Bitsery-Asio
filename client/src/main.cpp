@@ -14,6 +14,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
+#include <format>
 #include <iostream>
 #include <thread>
 #include <utility>
@@ -25,12 +26,11 @@ using Buffer        = std::vector<uint8_t>;
 using OutputAdapter = bitsery::OutputBufferAdapter<Buffer>;
 using InputAdapter  = bitsery::InputBufferAdapter<Buffer>;
 
-std::pair<Buffer, std::size_t> serialize(const auto &data)
+std::pair<Buffer, std::size_t> serializeToBin(const auto &data)
 {
-  Buffer     buffer;
-  const auto writtenSize =
-      bitsery::quickSerialization(OutputAdapter{buffer}, data);
-  return {std::move(buffer), writtenSize};
+  Buffer buffer;
+  auto   writtenSize = bitsery::quickSerialization(OutputAdapter{buffer}, data);
+  return {buffer, writtenSize};
 }
 
 void benchmarkBitsery()
@@ -41,21 +41,26 @@ void benchmarkBitsery()
       .firstStr  = "Hello",
       .secondStr = "World!",
   };
-  Data output{};
+  Data        output{};
+  std::size_t totalSize{0};
 
   const auto beg = std::chrono::high_resolution_clock::now();
-  for (int i = 0; i < 1'000; ++i)
+  for (int i = 0; i < 1'000'000; ++i)
   {
     const auto writtenSize =
         bitsery::quickSerialization(OutputAdapter{buffer}, data);
     bitsery::quickDeserialization(InputAdapter{buffer.begin(), writtenSize},
                                   output);
+    totalSize += writtenSize;
   }
 
   const auto end = std::chrono::high_resolution_clock::now();
   const auto duration =
       std::chrono::duration_cast<std::chrono::milliseconds>(end - beg);
-  std::cout << "Ser / Deser time: " << duration.count() << " ms" << std::endl;
+  std::cout << std::format("Ser / Deser of  {} bytes took {} ms",
+                           totalSize,
+                           duration.count())
+            << std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -76,23 +81,28 @@ int main(int argc, char *argv[])
     tcp::resolver resolver(io_context);
     boost::asio::connect(s, resolver.resolve(argv[1], argv[2]));
 
-    auto [body, bodySize] = serialize(Data{
+    const auto data = Data{
         .number    = 42,
         .firstStr  = "Hello",
         .secondStr = "World!",
-    });
+    };
+    const auto largeData = LargeData{
+        .large    = true,
+        .children = std::vector(256, data),
+    };
+
+    auto [body, bodySize] = serializeToBin(largeData);
     auto [header, headerSize] =
         serialize(Header{.size = static_cast<int>(bodySize)});
     Buffer package = std::move(header);
     std::move(body.begin(), body.end(), std::next(package.begin(), headerSize));
     const auto packageSize = headerSize + bodySize;
 
-    for (int i = 0; i < 1'000'000; ++i)
+    std::cout << "package size: " << packageSize << std::endl;
+    for (int i = 0; i < 100'000; ++i)
     {
       boost::asio::write(s, boost::asio::buffer(package, packageSize));
     }
-
-    std::this_thread::sleep_for(std::chrono::seconds{2});
   }
   catch (std::exception &e)
   {

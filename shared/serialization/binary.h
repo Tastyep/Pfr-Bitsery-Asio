@@ -4,8 +4,9 @@
 #include <boost/pfr/core.hpp>
 #include <boost/pfr/core_name.hpp>
 #include <concepts>
+#include <iostream>
+#include <ranges>
 #include <type_traits>
-
 template <typename... T>
 struct Overloaded : public T...
 {
@@ -15,7 +16,7 @@ template <class... Ts>
 Overloaded(Ts...) -> Overloaded<Ts...>;
 
 template <typename T>
-concept IsClass = std::is_class_v<T>;
+concept IsClass = std::is_aggregate_v<T>;
 
 template <typename S>
 void serialize(S &s, IsClass auto &data)
@@ -26,14 +27,23 @@ void serialize(S &s, IsClass auto &data)
           [&s]<typename T>(T &field)
             requires std::is_arithmetic_v<T>
           {
+            /* std::cout << "Serialize Arithmetic: " << field */
+            /*           << " size: " << (sizeof field) << std::endl; */
             s.template value<sizeof field>(field);
           },
           [&s](std::string &field)
           {
+            /* std::cout << "Serialize Text" << std::endl; */
             s.text1b(field, 100);
+          },
+          [&s](std::ranges::range auto &field)
+          {
+            /* std::cout << "Serialize Range" << std::endl; */
+            s.container(field, 2048);
           },
           [&s](IsClass auto &field)
           {
+            /* std::cout << "Serialize aggregate" << std::endl; */
             serialize(s, field);
           },
       });
