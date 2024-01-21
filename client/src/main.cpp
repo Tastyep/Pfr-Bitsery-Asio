@@ -93,9 +93,14 @@ int main(int argc, char *argv[])
 
     auto [body, bodySize] = serializeToBin(largeData);
     auto [header, headerSize] =
-        serialize(Header{.size = static_cast<int>(bodySize)});
-    Buffer package = std::move(header);
-    std::move(body.begin(), body.end(), std::next(package.begin(), headerSize));
+        serializeToBin(Header{.size = static_cast<int>(bodySize)});
+
+    Buffer package(headerSize + bodySize);
+    std::copy(
+        header.begin(), std::next(header.begin(), headerSize), package.begin());
+    std::copy(body.begin(),
+              std::next(body.begin(), bodySize),
+              std::next(package.begin(), headerSize));
     const auto packageSize = headerSize + bodySize;
 
     std::cout << "package size: " << packageSize << std::endl;
