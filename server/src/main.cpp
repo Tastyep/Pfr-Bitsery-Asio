@@ -1,12 +1,32 @@
+#include "shared/data.h"
+#include "shared/serialization/binary.h"
+// clang-format off
+#include <cstdint>
+// clang-format on
+
+#include "bitsery/details/adapter_common.h"
+
+#include <bitsery/adapter/buffer.h>
+#include <bitsery/bitsery.h>
+#include <bitsery/traits/core/traits.h>
+#include <bitsery/traits/string.h>
+#include <bitsery/traits/vector.h>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/asio/write.hpp>
+#include <boost/pfr/io.hpp>
 #include <chrono>
 #include <cstdio>
 #include <iostream>
+#include <iterator>
+#include <utility>
+
+using Buffer        = std::vector<uint8_t>;
+using OutputAdapter = bitsery::OutputBufferAdapter<Buffer>;
+using InputAdapter  = bitsery::InputBufferAdapter<Buffer>;
 
 using boost::asio::awaitable;
 using boost::asio::co_spawn;
@@ -31,21 +51,55 @@ struct HumanReadable
   }
 };
 
-/* awaitable<std::size_t> echo_once(tcp::socket &socket) */
-/* { */
-/*   char data[4096]; */
-/*   co_await async_write(socket, boost::asio::buffer(data, n), use_awaitable);
- */
-/**/
-/*   co_return n; */
-/* } */
+std::pair<std::vector<Data>, std::size_t> parsePackets(const Buffer &buffer,
+                                                       std::size_t   bufferSize)
+{
+  std::size_t parsedSize{0};
+
+  std::vector<Data> packets;
+  Header            header{};
+
+  while (parsedSize < bufferSize)
+  {
+    if (auto [code, _] = bitsery::quickDeserialization(
+            InputAdapter{std::next(buffer.begin(), parsedSize),
+                         bufferSize - parsedSize},
+            header);
+        code != bitsery::ReaderError::NoError)
+    {
+      break;
+    }
+    parsedSize += sizeof(Header);
+
+    Data data{};
+    if (auto [code, _] = bitsery::quickDeserialization(
+            InputAdapter{std::next(buffer.begin(), parsedSize),
+                         bufferSize - parsedSize},
+            data);
+        code != bitsery::ReaderError::NoError)
+    {
+      // We want to parse the header next time
+      parsedSize -= sizeof(Header);
+      break;
+    }
+
+    parsedSize += header.size;
+    /* std::cout << boost::pfr::io(header) << " | " << boost::pfr::io(data) */
+    /*           << std::endl; */
+    packets.push_back(std::move(data));
+  }
+
+  return {packets, parsedSize};
+}
 
 awaitable<void> echo(tcp::socket socket)
 {
   std::printf("New client connected");
 
-  std::vector<uint8_t> data(4096);
-  std::size_t          receivedBytes = 0;
+  Buffer            data(4096);
+  std::size_t       receivedBytes{0};
+  std::size_t       remainingBytes{0};
+  std::vector<Data> receivedPackets;
 
   auto       start         = std::chrono::high_resolution_clock::now();
   const auto speedInterval = std::chrono::milliseconds{100};
@@ -55,13 +109,16 @@ awaitable<void> echo(tcp::socket socket)
   {
     for (;;)
     {
-      // The asynchronous operations to echo a single chunk of data have been
-      // refactored into a separate function. When this function is called, the
-      // operations are still performed in the context of the current
-      // coroutine, and the behaviour is functionally equivalent.
-      std::size_t readSize = co_await socket.async_read_some(
-          boost::asio::buffer(data), use_awaitable);
-      /* auto packageSize     = co_await echo_once(socket); */
+      auto        buffer = boost::asio::buffer(data) + remainingBytes;
+      std::size_t readSize =
+          co_await socket.async_read_some(buffer, use_awaitable);
+      const auto bufferSize            = remainingBytes + readSize;
+      auto [parsedPackets, parsedSize] = parsePackets(data, bufferSize);
+      std::shift_left(data.begin(), data.end(), parsedSize);
+      remainingBytes = bufferSize - parsedSize;
+
+      std::ranges::move(parsedPackets, std::back_inserter(receivedPackets));
+
       receivedBytes       += readSize;
       const auto now       = std::chrono::high_resolution_clock::now();
       const auto interval  = now - start;
@@ -70,7 +127,8 @@ awaitable<void> echo(tcp::socket socket)
         const auto transferSpeed = receivedBytes * intervalsPerSecond;
         std::cout << "Speed: " << HumanReadable{transferSpeed} << " / second"
                   << std::endl;
-
+        std::cout << "Received: " << receivedPackets.size() << " packets."
+                  << std::endl;
         start         = now;
         receivedBytes = 0;
       }

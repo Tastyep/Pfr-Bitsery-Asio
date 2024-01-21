@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -51,7 +52,6 @@ void benchmarkBitsery()
                                   output);
   }
 
-  std::cout << boost::pfr::io(output) << std::endl;
   const auto end = std::chrono::high_resolution_clock::now();
   const auto duration =
       std::chrono::duration_cast<std::chrono::milliseconds>(end - beg);
@@ -68,27 +68,31 @@ int main(int argc, char *argv[])
       return 1;
     }
 
-    benchmarkBitsery();
+    /* benchmarkBitsery(); */
 
-    /* boost::asio::io_context io_context; */
-    /**/
-    /* tcp::socket   s(io_context); */
-    /* tcp::resolver resolver(io_context); */
-    /* boost::asio::connect(s, resolver.resolve(argv[1], argv[2])); */
-    /**/
-    /* auto [body, bodySize] = serialize(Data{ */
-    /*     .number = 42, */
-            /* .str    = "Hello World!", */
-    /* }); */
-    /* auto [header, headerSize] = */
-    /*     serialize(Header{.size = static_cast<int>(bodySize)}); */
-    /* Buffer package = std::move(header); */
-    /* std::move(body.begin(), body.end(), std::back_inserter(package)); */
-    /* const auto packageSize = headerSize + bodySize; */
-    /* for (int i = 0; i < 1'000'000; ++i) */
-    /* { */
-    /*   boost::asio::write(s, boost::asio::buffer(package, packageSize)); */
-    /* } */
+    boost::asio::io_context io_context;
+
+    tcp::socket   s(io_context);
+    tcp::resolver resolver(io_context);
+    boost::asio::connect(s, resolver.resolve(argv[1], argv[2]));
+
+    auto [body, bodySize] = serialize(Data{
+        .number    = 42,
+        .firstStr  = "Hello",
+        .secondStr = "World!",
+    });
+    auto [header, headerSize] =
+        serialize(Header{.size = static_cast<int>(bodySize)});
+    Buffer package = std::move(header);
+    std::move(body.begin(), body.end(), std::next(package.begin(), headerSize));
+    const auto packageSize = headerSize + bodySize;
+
+    for (int i = 0; i < 1'000'000; ++i)
+    {
+      boost::asio::write(s, boost::asio::buffer(package, packageSize));
+    }
+
+    std::this_thread::sleep_for(std::chrono::seconds{2});
   }
   catch (std::exception &e)
   {
