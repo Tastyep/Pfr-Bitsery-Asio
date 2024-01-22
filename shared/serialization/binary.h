@@ -1,22 +1,11 @@
 #ifndef SHARED_SERIALIZATION_BINARY_H
 #define SHARED_SERIALIZATION_BINARY_H
 
+#include "shared/meta.h"
+
 #include <boost/pfr/core.hpp>
 #include <boost/pfr/core_name.hpp>
-#include <concepts>
-#include <iostream>
-#include <ranges>
-#include <type_traits>
-template <typename... T>
-struct Overloaded : public T...
-{
-  using T::operator()...;
-};
-template <class... Ts>
-Overloaded(Ts...) -> Overloaded<Ts...>;
-
-template <typename T>
-concept IsClass = std::is_aggregate_v<T>;
+/* #include <iostream> */
 
 template <typename S>
 void serialize(S &s, IsClass auto &data)
