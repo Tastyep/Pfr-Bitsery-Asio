@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
     };
     const auto largeData = LargeData{
         .large    = true,
-        .children = std::vector(256, data),
+        .children = std::vector(2, data),
     };
 
     auto [body, bodySize] = serializeToBin(largeData);

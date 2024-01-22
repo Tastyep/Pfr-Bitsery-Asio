@@ -1,5 +1,6 @@
 #include "shared/data.h"
 #include "shared/serialization/binary.h"
+#include "shared/serialization/toml.h"
 // clang-format off
 #include <cstdint>
 // clang-format on
@@ -20,8 +21,10 @@
 #include <boost/pfr/io.hpp>
 #include <chrono>
 #include <cstdio>
+#include <filesystem>
 #include <iostream>
 #include <iterator>
+#include <streambuf>
 #include <utility>
 
 using Buffer        = std::vector<uint8_t>;
@@ -96,7 +99,7 @@ awaitable<void> echo(tcp::socket socket)
 {
   std::printf("New client connected");
 
-  Buffer                 data(16384);
+  Buffer                 data(4096);
   std::size_t            receivedBytes{0};
   std::size_t            remainingBytes{0};
   std::vector<LargeData> receivedPackets;
@@ -137,6 +140,11 @@ awaitable<void> echo(tcp::socket socket)
   catch (std::exception &e)
   {
     std::printf("echo Exception: %s\n", e.what());
+    if (!receivedPackets.empty())
+    {
+      const std::string tomlPacket = serializeAsToml(receivedPackets.back());
+      std::cout << "\nTOML:\n" << tomlPacket << std::endl;
+    }
   }
 }
 
