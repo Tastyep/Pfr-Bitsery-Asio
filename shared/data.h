@@ -16,10 +16,22 @@ struct Data
   std::string secondStr;
 };
 
+struct SubTest
+{
+  std::string       value;
+  std::vector<Data> datas = {{.number = 1}};
+};
+
+struct Test
+{
+  SubTest subTest;
+};
+
 struct LargeData
 {
   bool              large;
   std::vector<Data> children;
+  Test              test;
 };
 
 #endif
