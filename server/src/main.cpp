@@ -1,5 +1,6 @@
 #include "shared/data.h"
 #include "shared/serialization/binary.h"
+#include "shared/serialization/json.h"
 #include "shared/serialization/toml.h"
 // clang-format off
 #include <cstdint>
@@ -144,6 +145,8 @@ awaitable<void> echo(tcp::socket socket)
     {
       const std::string tomlPacket = serializeAsToml(receivedPackets.back());
       std::cout << "\nTOML:\n" << tomlPacket << std::endl;
+      const std::string jsonPacket = serializeAsJson(receivedPackets.back());
+      std::cout << "\nJSON:\n" << jsonPacket << std::endl;
     }
   }
 }
