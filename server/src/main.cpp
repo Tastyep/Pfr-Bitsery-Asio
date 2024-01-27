@@ -2,6 +2,7 @@
 #include "shared/serialization/binary.h"
 #include "shared/serialization/json.h"
 #include "shared/serialization/toml.h"
+#include "shared/serialization/yaml.h"
 // clang-format off
 #include <cstdint>
 // clang-format on
@@ -147,6 +148,8 @@ awaitable<void> echo(tcp::socket socket)
       std::cout << "\nTOML:\n" << tomlPacket << std::endl;
       const std::string jsonPacket = serializeAsJson(receivedPackets.back());
       std::cout << "\nJSON:\n" << jsonPacket << std::endl;
+      const std::string yamlPacket = serializeAsYaml(receivedPackets.back());
+      std::cout << "\nYAML:\n" << yamlPacket << std::endl;
     }
   }
 }
