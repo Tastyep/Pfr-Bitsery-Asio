@@ -20,6 +20,12 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_sources(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_SOURCES})
 target_link_libraries(
-  ${PROJECT_NAME} PUBLIC Boost::pfr Boost::json Bitsery::bitsery toml11::toml11
-                         yaml-cpp::yaml-cpp Bitsery::bitsery)
+  ${PROJECT_NAME}
+  PUBLIC Boost::pfr
+         Boost::json
+         Boost::describe
+         Bitsery::bitsery
+         toml11::toml11
+         yaml-cpp::yaml-cpp
+         Bitsery::bitsery)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR})
