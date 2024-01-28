@@ -5,9 +5,12 @@ project(netbench)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
 
+set(BUILD_SHARED_LIBS ON)
+
 set(DEPS_BOOST_LIBRARIES pfr asio json)
 include(${CMAKE_SOURCE_DIR}/cmake/FetchBoost.cmake)
 
+add_subdirectory(shared)
 add_subdirectory(server)
 add_subdirectory(client)
 
