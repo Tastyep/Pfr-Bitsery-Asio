@@ -3,7 +3,7 @@
 
 #include "boost/json/value_from.hpp"
 #include "shared/meta.h"
-#include "shared/serialization/json/pretty_print.hpp"
+#include "shared/serialization/json/pretty_print.h"
 
 #include <boost/json.hpp>
 #include <boost/pfr/core.hpp>
