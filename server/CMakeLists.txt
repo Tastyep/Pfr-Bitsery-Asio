@@ -2,9 +2,7 @@ cmake_minimum_required(VERSION 3.11)
 
 project(server LANGUAGES CXX)
 
-set(DEPS_BOOST_LIBRARIES pfr asio json)
-include(${CMAKE_SOURCE_DIR}/cmake/FetchBoost.cmake)
-find_package(Boost REQUIRED COMPONENTS ${DEPS_BOOST_LIBRARIES})
+find_package(Boost REQUIRED COMPONENTS pfr asio json)
 
 include(${CMAKE_SOURCE_DIR}/cmake/FetchBitsery.cmake)
 find_package(Bitsery)
