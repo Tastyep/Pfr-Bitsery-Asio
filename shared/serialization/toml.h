@@ -1,6 +1,7 @@
 #ifndef SHARED_TOML_H
 #define SHARED_TOML_H
 
+#include "shared/enum.hpp"
 #include "shared/meta.h"
 
 #include <boost/pfr/core.hpp>
@@ -9,6 +10,7 @@
 #include <sstream>
 #include <toml.hpp>
 #include <type_traits>
+
 namespace Detail
 {
 
@@ -17,9 +19,17 @@ void serializeAsToml(const T &data, toml::value &dest)
 {
   const auto names      = boost::pfr::names_as_array<T>();
   const auto serializer = Overloaded{
+    // clang-format off
+      [&dest]<typename F>(const F &field, const std::string &name)
+        requires std::is_enum_v<F>
+      {
+        const auto valueName = enum_to_string(field);
+        dest[name] = valueName;
+      },
       [&dest]<typename F>(const F &field, const std::string &name)
         requires std::is_arithmetic_v<F>
       {
+    // clang-format on
         /* std::cout << "Serialize arithmetic" << std::endl; */
         dest[name] = field;
       },
