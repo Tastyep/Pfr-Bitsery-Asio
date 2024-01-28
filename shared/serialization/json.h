@@ -3,10 +3,12 @@
 
 #include "boost/json/value_from.hpp"
 #include "shared/meta.h"
+#include "shared/serialization/json/pretty_print.hpp"
 
 #include <boost/json.hpp>
 #include <boost/pfr/core.hpp>
 #include <boost/pfr/core_name.hpp>
+#include <sstream>
 
 template <IsClass T>
 void tag_invoke(const boost::json::value_from_tag &,
@@ -26,7 +28,11 @@ void tag_invoke(const boost::json::value_from_tag &,
 template <IsClass T>
 std::string serializeAsJson(const T &data)
 {
-  return boost::json::serialize(boost::json::value_from(data));
+  /* return boost::json::serialize(boost::json::value_from(data)); */
+  std::ostringstream ss;
+  const auto        &jsonValue = boost::json::value_from(data);
+  pretty_print(ss, jsonValue);
+  return ss.str();
 }
 
 #endif
