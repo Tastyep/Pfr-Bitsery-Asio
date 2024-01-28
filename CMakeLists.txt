@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(BUILD_SHARED_LIBS ON)
 
-set(DEPS_BOOST_LIBRARIES pfr asio json)
+set(DEPS_BOOST_LIBRARIES pfr asio json describe mp11)
 include(${CMAKE_SOURCE_DIR}/cmake/FetchBoost.cmake)
 
 add_subdirectory(shared)

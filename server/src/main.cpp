@@ -20,7 +20,6 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/asio/write.hpp>
-#include <boost/pfr/io.hpp>
 #include <chrono>
 #include <cstdio>
 #include <filesystem>
@@ -89,8 +88,6 @@ parsePackets(const Buffer &buffer, std::size_t bufferSize)
     }
     parsedSize += header.size;
 
-    /* std::cout << boost::pfr::io(header) << " | " << boost::pfr::io(data) */
-    /*           << std::endl; */
     packets.push_back(std::move(data));
   }
 
@@ -146,8 +143,10 @@ awaitable<void> echo(tcp::socket socket)
     {
       const std::string tomlPacket = serializeAsToml(receivedPackets.back());
       std::cout << "\nTOML:\n" << tomlPacket << std::endl;
+
       const std::string jsonPacket = serializeAsJson(receivedPackets.back());
       std::cout << "\nJSON:\n" << jsonPacket << std::endl;
+
       const std::string yamlPacket = serializeAsYaml(receivedPackets.back());
       std::cout << "\nYAML:\n" << yamlPacket << std::endl;
     }
